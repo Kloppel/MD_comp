@@ -57,7 +57,7 @@ barostatInterval = 25
 
 steps = 500000
 equilibrationSteps = 500000
-dcdReporter = DCDReporter('test.dcd', 10000)
+pdbReporter = PDBReporter('test.pdb', 10000)
 dataReporter = StateDataReporter('test.txt', 10000, totalSteps=steps,
     step=True, speed=True, progress=True, potentialEnergy=True, temperature=True, separator='\t')
 checkpointReporter = CheckpointReporter('checkpoint.chk', 10000)
