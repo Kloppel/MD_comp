@@ -55,12 +55,11 @@ barostatInterval = 25
 
 # Simulation Options
 
-steps = 5500000
-equilibrationSteps = 500000
-dcdReporter = DCDReporter('4pti.dcd', 10000)
-dataReporter = StateDataReporter('log.txt', 10000, totalSteps=steps,
+steps = 5000000
+dcdReporter = DCDReporter('4pti_simulation.dcd', 10000)
+dataReporter = StateDataReporter('4pti_simualtion.txt', 10000, totalSteps=steps,
     step=True, speed=True, progress=True, potentialEnergy=True, temperature=True, separator='\t')
-checkpointReporter = CheckpointReporter('checkpoint.chk', 10000)
+checkpointReporter = CheckpointReporter('4pti_simulation.chk', 10000)
 
 # Prepare the Simulation
 
@@ -72,38 +71,15 @@ start1 = time.time()
 print('Building system...')
 topology = psf.topology
 print(dir(params))
-positions = crd.positions
 system = psf.createSystem(params, nonbondedMethod=nonbondedMethod, nonbondedCutoff=nonbondedCutoff,
     constraints=constraints, rigidWater=rigidWater, ewaldErrorTolerance=ewaldErrorTolerance, hydrogenMass=hydrogenMass)
-system.addForce(MonteCarloBarostat(pressure, temperature, barostatInterval))
 integrator = LangevinMiddleIntegrator(temperature, friction, dt)
 integrator.setConstraintTolerance(constraintTolerance)
 simulation = Simulation(topology, system, integrator)
-simulation.context.setPositions(positions)
 
-# Minimize and Equilibrate
-print_memory_usage()
-print("Getting forces..")
-state = simulation.context.getState(getPositions=True)
-print('Initial potential energy:')
-end1 = time.time()
-print("system building time:            ", end1-start1)
-print('Performing energy minimization...')
-simulation.minimizeEnergy()
-end2 = time.time()
-print("minimization time:               ", end2-end1)
-print('Equilibrating...')
-simulation.context.setVelocitiesToTemperature(temperature)
-simulation.step(equilibrationSteps)
-end3 = time.time()
-print("equilibration time:               ", end3-end2)
-
-# Switching from NPT to NVT Ensemble for simulation
-print("Equilibration complete. Switching to NVT ensemble.")
-
-# Remove the barostat for NVT simulation
-forces = { force.__class__.__name__ : force for force in system.getForces() }
-system.removeForce(forces['MonteCarloBarostat'].getIndex())
+# Load checkpoint file
+checkpoint_file = '4pti_eq.chk'
+simulation.loadCheckpoint(checkpoint_file)
 
 # Simulate
 
@@ -113,5 +89,5 @@ simulation.reporters.append(dataReporter)
 simulation.reporters.append(checkpointReporter)
 simulation.currentStep = 0
 simulation.step(steps)
-end4 = time.time()
-print("simulation time:                  ", end4-end3)
+end2 = time.time()
+print("simulation time:                  ", end2-end1)

@@ -56,10 +56,10 @@ barostatInterval = 25
 # Simulation Options
 
 equilibrationSteps = 500000
-dcdReporter = DCDReporter('4pti.dcd', 10000)
-dataReporter = StateDataReporter('log.txt', 10000, totalSteps=equilibrationSteps,
+dcdReporter = DCDReporter('4pti_eq.dcd', 5000)
+dataReporter = StateDataReporter('4pti_eq.txt', 5000, totalSteps=equilibrationSteps,
     step=True, speed=True, progress=True, potentialEnergy=True, temperature=True, separator='\t')
-checkpointReporter = CheckpointReporter('checkpoint.chk', 10000)
+checkpointReporter = CheckpointReporter('4pti_eq.chk', 5000)
 
 # Prepare the Simulation
 
@@ -100,7 +100,7 @@ end3 = time.time()
 print("equilibration time:               ", end3-end2)
 
 # Save the equilibrated state to a checkpoint file
-checkpoint_file = 'equilibration_checkpoint.chk'
+checkpoint_file = '4pti_eq.chk'
 simulation.saveCheckpoint(checkpoint_file)
 
 print("End of equilibration")

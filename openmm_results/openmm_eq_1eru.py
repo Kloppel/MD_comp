@@ -10,8 +10,8 @@ import time
 
 import os
 print(os.getcwd())
-# Input Files
 
+# Input Files
 psf = CharmmPsfFile('1eru.psf')
 crd = CharmmCrdFile('1eru.crd')
 pdb = PDBFile('1eru.pdb')
@@ -33,7 +33,7 @@ hydrogenMass = 1.5*amu
 
 is_periodic = psf.box_vectors is not None
 
-# Periodic Box Vectors
+#Periodic Box Vectors
 if not is_periodic:
     sizebox=6.3
     # Example values for box lengths (in nanometers)
@@ -45,7 +45,7 @@ if not is_periodic:
     # Set periodic box vectors
     psf.setBox(a_length, b_length, c_length)
 
-# Integrators
+#Integrators
 
 dt = 0.004*picoseconds
 temperature = 300*kelvin
@@ -55,12 +55,11 @@ barostatInterval = 25
 
 # Simulation Options
 
-steps = 5500000
 equilibrationSteps = 500000
-dcdReporter = DCDReporter('1eru.dcd', 5000)
-dataReporter = StateDataReporter('log.txt', 5000, totalSteps=steps,
+dcdReporter = DCDReporter('1eru_eq.dcd', 5000)
+dataReporter = StateDataReporter('1eru_eq.txt', 5000, totalSteps=equilibrationSteps,
     step=True, speed=True, progress=True, potentialEnergy=True, temperature=True, separator='\t')
-checkpointReporter = CheckpointReporter('checkpoint.chk', 5000)
+checkpointReporter = CheckpointReporter('1eru_eq.chk', 5000)
 
 # Prepare the Simulation
 
@@ -77,50 +76,31 @@ system = psf.createSystem(params, nonbondedMethod=nonbondedMethod, nonbondedCuto
     constraints=constraints, rigidWater=rigidWater, ewaldErrorTolerance=ewaldErrorTolerance, hydrogenMass=hydrogenMass)
 system.addForce(MonteCarloBarostat(pressure, temperature, barostatInterval))
 
-# Equilibration
-equilibration_integrator = LangevinMiddleIntegrator(temperature, friction, dt)
-equilibration_integrator.setConstraintTolerance(constraintTolerance)
-equilibration_simulation = Simulation(topology, system, equilibration_integrator)
-equilibration_simulation.context.setPositions(positions)
+# Integrators
+integrator = LangevinMiddleIntegrator(temperature, friction, dt)
+integrator.setConstraintTolerance(constraintTolerance)
+simulation = Simulation(topology, system, integrator)
+simulation.context.setPositions(positions)
 
-# Minimize and Equilibrate
+# Minimization and Equilibration
 print_memory_usage()
 print("Getting forces..")
-state = equilibration_simulation.context.getState(getPositions=True)
+state = simulation.context.getState(getPositions=True)
 print('Initial potential energy:')
 end1 = time.time()
 print("system building time:            ", end1-start1)
 print('Performing energy minimization...')
-equilibration_simulation.minimizeEnergy()
+simulation.minimizeEnergy()
 end2 = time.time()
 print("minimization time:               ", end2-end1)
 print('Equilibrating...')
-equilibration_simulation.context.setVelocitiesToTemperature(temperature)
-equilibration_simulation.step(equilibrationSteps)
+simulation.context.setVelocitiesToTemperature(temperature)
+simulation.step(equilibrationSteps)
 end3 = time.time()
 print("equilibration time:               ", end3-end2)
 
-# Change to NVT ensemble by removing MonteCarloBarostat
-for force in system.getForces():
-    if isinstance(force, MonteCarloBarostat):
-        system.removeForce(system.getForceIndex(force))
-        break
+# Save the equilibrated state to a checkpoint file
+checkpoint_file = '1eru_eq.chk'
+simulation.saveCheckpoint(checkpoint_file)
 
-print('Performing energy minimization...')
-simulation.minimizeEnergy()
-end4 = time.time()
-print("simulation time:                   ", end4-end3)
-# Simulation
-simulation_integrator = LangevinMiddleIntegrator(temperature, friction, dt)
-simulation_integrator.setConstraintTolerance(constraintTolerance)
-simulation = Simulation(topology, system, integrator)
-simulation.context.setPositions(positions)
-
-print('Simulating...')
-simulation.reporters.append(dcdReporter)
-simulation.reporters.append(dataReporter)
-simulation.reporters.append(checkpointReporter)
-simulation.currentStep = 0
-simulation.step(steps)
-end5 = time.time()
-print("simulation time:                  ", end5-end4)
+print("End of equilibration")
