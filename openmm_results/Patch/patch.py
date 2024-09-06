@@ -10,8 +10,7 @@ pdb = PDBFile('1eru.pdb')
 # Load CHARMM force field and parameters
 forcefield = ForceField('../charmm.xml/charmm36.xml')
 
-# Automatically find disulfide bonds (if there are none, skip this)
-# Disulfide bonds are between pairs of cysteine (CYS) residues, specifically the SG atoms.
+# Finds possible sulfidbonds between cys with a maximum distance of 2.4 Angström
 def find_disulfide_bonds(pdb_structure):
     disulfide_bonds = []
     atom_pairs = []
