@@ -3,12 +3,29 @@ from openmm.app import *
 from openmm.unit import *
 from sys import stdout
 import os
+import time
+
+# Start timing
+start_time = time.time()
+
+print("Imports done")
+imports_time = time.time()
+print(f"Time taken: {imports_time - start_time:.2f} seconds")
 
 # Load PDB file
 pdb = PDBFile('1eru.pdb')
+pdb_time = time.time()
+print("Loaded PDB")
+print(f"Time taken: {pdb_time - imports_time:.2f} seconds")
 
 # Load CHARMM force field and parameters
-forcefield = ForceField('../charmm.xml/charmm36.xml')
+forcefield = ForceField('../charmm36.xml/charmm36.xml')
+ff_time = time.time()
+print("Loaded force field")
+print(f"Time taken: {ff_time - pdb_time:.2f} seconds")
+
+# Total time
+print(f"Total time taken: {ff_time - start_time:.2f} seconds")
 
 # Finds possible sulfidbonds between cys with a maximum distance of 2.4 Angström
 def find_disulfide_bonds(pdb_structure):
