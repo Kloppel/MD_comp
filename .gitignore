@@ -3,3 +3,7 @@
 *.txt
 *.restart.*
 github
+*.vel
+*.coor
+*.xsc
+*.BAK
