@@ -89,5 +89,5 @@ simulation.reporters.append(dataReporter)
 simulation.reporters.append(checkpointReporter)
 simulation.currentStep = 0
 simulation.step(steps)
-end2 = time.time()
-print("simulation time:                  ", end2-end1)
+end1 = time.time()
+print("simulation time:                  ", end1-start1)
