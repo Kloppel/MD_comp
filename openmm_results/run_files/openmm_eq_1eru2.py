@@ -86,6 +86,9 @@ integrator.setConstraintTolerance(constraintTolerance)
 simulation = Simulation(topology, system, integrator)
 simulation.context.setPositions(positions)
 
+# Perform minimization before heating
+simulation.minimizeEnergy()
+
 # Heating Process
 print("Starting heating process...")
 current_temperature = initial_temperature

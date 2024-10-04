@@ -65,7 +65,7 @@ checkpointReporter = CheckpointReporter('4pti_eq.chk', 10000)
 initial_temperature = 0 * kelvin  # Start at 0 K
 target_temperature = 300 * kelvin  # Final temperature for equilibration
 temperature_increment = 6 * kelvin  # Increase temperature by 10 K
-heating_steps = 500  # Number of steps per temperature increment
+heating_steps = 1000  # Number of steps per temperature increment
 
 # Prepare the Simulation
 def print_memory_usage():
@@ -88,6 +88,8 @@ simulation.context.setPositions(positions)
 
 # Minimization before Heating process
 simulation.minimizeEnergy()
+end1 = time.time()
+print("Energyminimization time:          ", end1-start1)
 
 # Heating Process
 print("Starting heating process...")
@@ -115,23 +117,24 @@ simulation.reporters.append(dcdReporter)
 simulation.reporters.append(dataReporter)
 simulation.reporters.append(checkpointReporter)
 print("End of heating")
-
+end2 = time.time()
+print("heating time:          ", end2-end1)
 # Minimization and Equilibration
 print_memory_usage()
 print("Getting forces..")
 state = simulation.context.getState(getPositions=True)
 print('Initial potential energy:')
-end1 = time.time()
-print("system building time:            ", end1-start1)
+end3 = time.time()
+print("system building time:            ", end3-end2)
 print('Performing energy minimization...')
 simulation.minimizeEnergy()
-end2 = time.time()
-print("minimization time:               ", end2-end1)
+end4 = time.time()
+print("minimization time:               ", end4-end3)
 print('Equilibrating...')
 simulation.context.setVelocitiesToTemperature(target_temperature)
 simulation.step(equilibrationSteps)
-end3 = time.time()
-print("equilibration time:               ", end3-end2)
+end5 = time.time()
+print("equilibration time:               ", end5-end4)
 
 # Save the equilibrated state to a checkpoint file
 checkpoint_file = '4pti_eq.chk'
