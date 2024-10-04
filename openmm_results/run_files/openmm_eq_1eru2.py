@@ -58,11 +58,16 @@ barostatInterval = 25
 equilibrationSteps = 500000
 dcdReporter = DCDReporter('1eru_eq.dcd', 10000)
 dataReporter = StateDataReporter('1eru_eq.txt', 10000, totalSteps=equilibrationSteps,
-    step=True, speed=True, progress=True, potentialEnergy=True, temperature=True, separator='\t')
+                                 step=True, speed=True, progress=True, potentialEnergy=True, temperature=True, separator='\t')
 checkpointReporter = CheckpointReporter('1eru_eq.chk', 10000)
 
-# Prepare the Simulation
+# Heating parameters
+initial_temperature = 0 * kelvin  # Start at 0 K
+target_temperature = 300 * kelvin  # Final temperature for equilibration
+temperature_increment = 6 * kelvin  # Increase temperature by 10 K
+heating_steps = 500  # Number of steps per temperature increment
 
+# Prepare the Simulation
 def print_memory_usage():
     process = psutil.Process(os.getpid())
     print('Memory usage:', process.memory_info().rss / (1024 * 1024), 'MB')  # in MB
@@ -70,25 +75,43 @@ def print_memory_usage():
 start1 = time.time()
 print('Building system...')
 topology = psf.topology
-print(dir(params))
 positions = crd.positions
 system = psf.createSystem(params, nonbondedMethod=nonbondedMethod, nonbondedCutoff=nonbondedCutoff,
-    constraints=constraints, rigidWater=rigidWater, ewaldErrorTolerance=ewaldErrorTolerance, hydrogenMass=hydrogenMass)
-system.addForce(MonteCarloBarostat(pressure, temperature, barostatInterval))
+                          constraints=constraints, rigidWater=rigidWater, ewaldErrorTolerance=ewaldErrorTolerance, hydrogenMass=hydrogenMass)
+system.addForce(MonteCarloBarostat(pressure, target_temperature, barostatInterval))
 
 # Integrators
-integrator = LangevinMiddleIntegrator(temperature, friction, dt)
+integrator = LangevinMiddleIntegrator(initial_temperature, friction, dt)
 integrator.setConstraintTolerance(constraintTolerance)
 simulation = Simulation(topology, system, integrator)
 simulation.context.setPositions(positions)
 
+# Heating Process
+print("Starting heating process...")
+current_temperature = initial_temperature
+while current_temperature < target_temperature:
+    integrator.setTemperature(current_temperature)
+    simulation.context.setVelocitiesToTemperature(current_temperature)  # Set velocities according to the current temperature
+    print(f"Heating to {current_temperature}...")
+    
+    # Run the simulation for the heating steps at this temperature
+    simulation.step(heating_steps)
+    
+    # Increase the temperature
+    current_temperature += temperature_increment
+
+# Set the final target temperature for equilibration
+integrator.setTemperature(target_temperature)
+simulation.context.setVelocitiesToTemperature(target_temperature)
+print("Heating process completed.")
+
 # Save the equilibrated state to a checkpoint file
-checkpoint_file = '1eru_eq.chk'
+checkpoint_file = '1eru_heated.chk'
 simulation.saveCheckpoint(checkpoint_file)
 simulation.reporters.append(dcdReporter)
 simulation.reporters.append(dataReporter)
 simulation.reporters.append(checkpointReporter)
-print("End of equilibration")
+print("End of heating")
 
 # Minimization and Equilibration
 print_memory_usage()
@@ -102,7 +125,13 @@ simulation.minimizeEnergy()
 end2 = time.time()
 print("minimization time:               ", end2-end1)
 print('Equilibrating...')
-simulation.context.setVelocitiesToTemperature(temperature)
+simulation.context.setVelocitiesToTemperature(target_temperature)
 simulation.step(equilibrationSteps)
 end3 = time.time()
 print("equilibration time:               ", end3-end2)
+
+# Save the equilibrated state to a checkpoint file
+checkpoint_file = '1eru_eq.chk'
+simulation.saveCheckpoint(checkpoint_file)
+
+print("End of equilibration")
