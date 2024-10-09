@@ -7,3 +7,15 @@ github
 *.coor
 *.xsc
 *.BAK
+*.out
+*.sh
+*.crd
+*.cif
+*.prm
+*.rst
+*.rtf
+*.str
+*.xst
+*.tex
+*.ipynb
+*.err

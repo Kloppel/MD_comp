@@ -47,7 +47,7 @@ if not is_periodic:
 
 #Integrators
 
-dt = 0.004*picoseconds
+dt = 0.002*picoseconds
 temperature = 300*kelvin
 friction = 1.0/picosecond
 pressure = 1.0*atmospheres
@@ -65,7 +65,7 @@ checkpointReporter = CheckpointReporter('4pti_eq.chk', 10000)
 initial_temperature = 0 * kelvin  # Start at 0 K
 target_temperature = 300 * kelvin  # Final temperature for equilibration
 temperature_increment = 6 * kelvin  # Increase temperature by 10 K
-heating_steps = 1000  # Number of steps per temperature increment
+heating_steps = 500  # Number of steps per temperature increment
 
 # Prepare the Simulation
 def print_memory_usage():
@@ -96,7 +96,6 @@ print("Starting heating process...")
 current_temperature = initial_temperature
 while current_temperature < target_temperature:
     integrator.setTemperature(current_temperature)
-    simulation.context.setVelocitiesToTemperature(current_temperature)  # Set velocities according to the current temperature
     print(f"Heating to {current_temperature}...")
     
     # Run the simulation for the heating steps at this temperature
