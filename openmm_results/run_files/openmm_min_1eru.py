@@ -13,7 +13,7 @@ print(os.getcwd())
 
 # Input Files
 psf = CharmmPsfFile('../struct/1eru.psf')
-crd = CharmmCrdFile('../struct/1eru.crd')
+# crd = CharmmCrdFile('../struct/1eru.crd') # if no pdb is givin crd also usable
 pdb = PDBFile('../struct/1eru.pdb')
 print("This are the pdbreader files")
 forceField = ForceField('../charmm36/charmm36.xml', '../charmm36/water.xml')
@@ -43,7 +43,7 @@ is_periodic = psf.box_vectors is not None
 
 #Periodic Box Vectors
 if not is_periodic:
-    sizebox=6.4
+    sizebox=6.3
     # Example values for box lengths (in nanometers)
     a_length = sizebox * nanometer
     b_length = sizebox * nanometer
@@ -61,10 +61,10 @@ def print_memory_usage():
 start1 = time.time()
 print('Building system...')
 topology = psf.topology
-positions = pdb.positions
+positions = pdb.positions # crd.positions if crd is given and no pdb file
 system = psf.createSystem(params, nonbondedMethod=nonbondedMethod, nonbondedCutoff=nonbondedCutoff,
                           constraints=constraints, rigidWater=rigidWater, ewaldErrorTolerance=ewaldErrorTolerance, hydrogenMass=hydrogenMass)
-
+system.addForce(MonteCarloBarostat(pressure, temperature, barostatInterval))
 # Integrators
 integrator = LangevinMiddleIntegrator(temperature, friction, dt)
 integrator.setConstraintTolerance(constraintTolerance)
@@ -74,7 +74,7 @@ simulation.context.setPositions(positions)
 # Perform minimization before heating
 print("minimizing system...")
 
-simulation.minimizeEnergy(maxIterations=20000)
+simulation.minimizeEnergy(maxIterations=10000)
 
 print("end of minimization")
 
