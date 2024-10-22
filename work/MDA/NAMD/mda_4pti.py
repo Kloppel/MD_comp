@@ -9,24 +9,10 @@ u = mda.Universe("4pti.psf", "4pti_eq.dcd", "4pti_prod.dcd")
 print(u)
 print(len(u.trajectory))
 
-# Groups of atoms
-print(u.residues)
-u.atoms
-
-# AtomGroup positions and methods
-ca = u.select_atoms("protein")
-print(ca.positions)
-print(ca.positions.shape)
-print(ca.center_of_mass())
-print(ca.center_of_geometry())
-print(ca.total_mass())
-print(ca.total_charge())
-print(ca.radius_of_gyration())
-print(ca.bsphere())
-
-
 # Working with trajectories
 print(len(u.trajectory))
+
+# Radius of gyration
 
 for ts in u.trajectory[:1]:
     time = u.trajectory.time
@@ -58,6 +44,7 @@ rgyr_df.plot(title='Radius of gyration')
 plt.show()
 
 # Writing out coordinates
+# RMSD
 
 a = u.select_atoms('protein')
 with mda.Writer('4pti.xtc', ca.n_atoms) as w:
@@ -89,6 +76,8 @@ rmsd_df.index.name = 'Time (ps)'
 rmsd_df.head()
 rmsd_df.plot(title='RMSD')
 plt.show()
+
+# Hbonds
 
 import pickle
 import numpy as np
@@ -159,6 +148,7 @@ print(f"Most common hydrogen: {u.atoms[most_common[1]]}")
 print(f"Most common acceptor: {u.atoms[most_common[2]]}")
 
 np.save("4pti_hbonds.npy", hbonds.results.hbonds)
+
 
 # Dihedral Angles
 
