@@ -64,10 +64,7 @@ topology = psf.topology
 positions = pdb.positions # crd.positions if crd is given and no pdb file
 system = psf.createSystem(params, nonbondedMethod=nonbondedMethod, nonbondedCutoff=nonbondedCutoff,
                           constraints=constraints, rigidWater=rigidWater, ewaldErrorTolerance=ewaldErrorTolerance, hydrogenMass=hydrogenMass)
-system.addForce(MonteCarloBarostat(pressure, temperature, barostatInterval))
-# Integrators
-integrator = LangevinMiddleIntegrator(temperature, friction, dt)
-integrator.setConstraintTolerance(constraintTolerance)
+integrator = LangevinIntegrator(temperature, friction, dt)
 simulation = Simulation(topology, system, integrator)
 simulation.context.setPositions(positions)
 

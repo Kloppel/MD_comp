@@ -32,4 +32,12 @@ def get_keyString(d: dict):
         keystring+=f"{key}, "
     return keystring[:-2]
 
+def get_periodic_boxVectors_from_PDB(filename: str):
+    with open(filename, 'r') as f:
+        for line in f:
+            if line.startswith("CRYST1"):
+                box_lengths = [float(line.split()[i]) for i in range(1, 4)]
+                box_angles = [float(line.split()[i]) for i in range(4, 7)]
+                break
+    return box_lengths, box_angles
 

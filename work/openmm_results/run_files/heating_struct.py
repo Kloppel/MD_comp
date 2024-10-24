@@ -17,7 +17,7 @@ import os
 print(os.getcwd())
 
 
-heating_steps = 5000
+heating_steps = 500
 struct_name = '1eru'
 run_name=f"hs{heating_steps}_NPT"
 
@@ -163,18 +163,21 @@ while current_temperature < target_temperature:
 
 # Set the final target temperature for equilibration
 integrator.setTemperature(target_temperature)
-simulation.context.setVelocitiesToTemperature(target_temperature)
-simulation.step(heating_steps)
+simulation.context.setParameter(MonteCarloBarostat.Temperature(), target_temperature)
+simulation.step(heating_steps*10)
 print("Heating process completed.")
 
 final_time = time.time()
 print(f"The process took {seconds_to_timestring(final_time-initial_time)}.")
 
 # Retrieve the current state of the simulation
-state: State = simulation.context.getState(getPositions=True, getBox=True)
+state: State = simulation.context.getState(getPositions=True)
 box_vectors = state.getPeriodicBoxVectors()
+simulation.topology.setPeriodicBoxVectors(box_vectors)
+
 
 
 # Speichern der PDB-Datei
 with open(f'../struct/heated_{struct_name}{run_name}.pdb', 'w') as output:
-    app.PDBFile.writeFile(simulation.topology, state.getPositions(), output, boxVectors=box_vectors)
+    app.PDBFile.writeFile(simulation.topology, state.getPositions(), output)
+    print(f"Final structure saved as heated_{struct_name}{run_name}.pdb")

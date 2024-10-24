@@ -10,7 +10,7 @@ from sys import stdout, exit, stderr
 import psutil
 import time
 
-from utils_local import loading_bar, seconds_to_timestring, get_keyString
+from utils_local import loading_bar, seconds_to_timestring, get_keyString, get_periodic_boxVectors_from_PDB
 
 import os
 
@@ -18,8 +18,10 @@ print(os.getcwd())
 
 
 total_steps = int(1e5)
+n_frames = 500
 struct_name = '1eru'
-run_name=f"nh{total_steps}"
+run_name=f"ts{total_steps}"
+heated_run_name="hs500_NPT"
 
 # Input Files
 print("\n\nThe structured being modelled is: ", struct_name)
@@ -30,11 +32,11 @@ else:
     print("No run name was provided, saving as default structure.")
 
 #
-
+initialpdb = f'../struct/heated_{struct_name}_{heated_run_name}.pdb'
 psf = app.CharmmPsfFile(f'../struct/{struct_name}.psf')
-pdb = app.PDBFile(f'../struct/minimized_{struct_name}.pdb')
+pdb = app.PDBFile(initialpdb)
 print("This are the pdbreader files")
-forceField = app.ForceField('../charmm36/charmm36.xml', '../charmm36/water.xml')
+#forceField = app.ForceField('../charmm36/charmm36.xml', '../charmm36/water.xml')
 param_list=['toppar_water_ions.str', 'toppar_ions_won.str', 'toppar_dum_noble_gases.str', 'toppar_all36_synthetic_polymer_patch.str', 'toppar_all36_synthetic_polymer.str', 'toppar_all36_prot_retinol.str', 'toppar_all36_prot_na_combined.str', 'toppar_all36_prot_modify_res.str', 'toppar_all36_prot_model.str', 'toppar_all36_prot_heme.str', 'toppar_all36_prot_fluoro_alkanes.str', 'toppar_all36_prot_c36m_d_aminoacids.str', 'toppar_all36_prot_arg0.str', 'toppar_all36_polymer_solvent.str', 'toppar_all36_na_rna_modified.str', 'toppar_all36_nano_lig_patch.str', 'toppar_all36_nano_lig.str', 'toppar_all36_na_nad_ppi.str', 'toppar_all36_moreions.str', 'toppar_all36_lipid_yeast.str', 'toppar_all36_lipid_tag.str', 'toppar_all36_lipid_sphingo.str', 'toppar_all36_lipid_prot.str', 'toppar_all36_lipid_oxidized.str', 'toppar_all36_lipid_mycobacterial.str', 'toppar_all36_lipid_model.str', 'toppar_all36_lipid_miscellaneous.str', 'toppar_all36_lipid_lps.str', 'toppar_all36_lipid_lnp.str', 'toppar_all36_lipid_inositol.str', 'toppar_all36_lipid_hmmm.str', 'toppar_all36_lipid_ether.str', 'toppar_all36_lipid_detergent.str', 'toppar_all36_lipid_dag.str', 'toppar_all36_lipid_cholesterol.str', 'toppar_all36_lipid_cardiolipin.str', 'toppar_all36_lipid_bacterial.str', 'toppar_all36_lipid_archaeal.str', 'toppar_all36_label_spin.str', 'toppar_all36_label_fluorophore.str', 'toppar_all36_carb_imlab.str', 'toppar_all36_carb_glycopeptide.str', 'toppar_all36_carb_glycolipid.str', 'top_interface.rtf', 'top_all36_prot.rtf', 'top_all36_na.rtf', 'top_all36_lipid.rtf', 'top_all36_cgenff.rtf', 'top_all36_carb.rtf', 'par_interface.prm', 'par_all36_na.prm', 'par_all36m_prot.prm', 'par_all36_lipid.prm', 'par_all36_cgenff.prm', 'par_all36_carb.prm', 'cam.str']
 param_files= ["../params/"+ filename for filename in param_list]
 params = app.CharmmParameterSet(*param_files)
@@ -53,15 +55,15 @@ is_periodic = psf.box_vectors is not None
 
 #Periodic Box Vectors
 if not is_periodic:
-    sizebox=6.3
-    # Example values for box lengths (in nanometers)
-    a_length = sizebox * nanometer
-    b_length = sizebox * nanometer
-    c_length = sizebox * nanometer
-    print("\n\nSetting periodic box vectors to")
-
-    # Set periodic box vectors
+    boxVectors, boxAngles = get_periodic_boxVectors_from_PDB(initialpdb)
+    a_length = boxVectors[0]
+    b_length = boxVectors[1]
+    c_length = boxVectors[2]
+    print(f"\n\nSetting periodic box vectors to ({a_length}, {b_length}, {c_length})")
     psf.setBox(a_length, b_length, c_length)
+
+
+
 
 #Integrators
 
@@ -70,11 +72,6 @@ temperature = 300*kelvin
 friction = 1.0/picosecond
 pressure = 1.0*atmospheres
 barostatInterval = 25
-
-# Heating parameters
-initial_temperature = 0 * kelvin
-target_temperature = 300 * kelvin
-temperature_increment = 6 * kelvin # Increasing temperature by 6 K
 
 
 
@@ -103,17 +100,17 @@ positions = pdb.positions
 system = psf.createSystem(params, nonbondedMethod=nonbondedMethod, nonbondedCutoff=nonbondedCutoff,
                           constraints=constraints, rigidWater=rigidWater, ewaldErrorTolerance=ewaldErrorTolerance, hydrogenMass=hydrogenMass)
 
-integrator = LangevinMiddleIntegrator(initial_temperature, friction, dt)
+integrator = LangevinMiddleIntegrator(temperature, friction, dt)
 integrator.setConstraintTolerance(constraintTolerance)
 
 values2report = {"step": True, "kineticEnergy": True, "temperature": True, "speed": True, "volume": True}
-outfile=f"../results/{struct_name}_heating{run_name}.csv"
-reporter = app.StateDataReporter(outfile, total_steps/100, 
+outfile=f"../results/{struct_name}_production{run_name}.csv"
+reporter = app.StateDataReporter(outfile, total_steps/n_frames, 
                                   separator=';', **values2report)
 print(f"\n\nResults for {get_keyString(values2report)} will be saved in {outfile}")
 
-outfile=f"../results/{struct_name}_heating{run_name}.dcd"
-dcd_reporter = app.DCDReporter(f'outfile', int(total_steps/100))
+outfile=f"../results/{struct_name}_production{run_name}.dcd"
+dcd_reporter = app.DCDReporter(f'outfile', int(total_steps/n_frames))
 print(f"Trajectory will be saved in {outfile}")
 
 
@@ -125,7 +122,7 @@ simulation.reporters.append(reporter)
 
 
 
-# Heating Process
+# Production Process
 art=f"""
 \n
 +8-=-=-=-=-=-8+
@@ -146,7 +143,11 @@ art=f"""
  """
 print(art)
 initial_time = time.time()
-simulation.context.setVelocitiesToTemperature(initial_temperature)
+simulation.context.setVelocitiesToTemperature(temperature)
+for i in range(n_frames):
+    print(loading_bar(i, n_frames, f"Production run for {total_steps*dt / picoseconds * milliseconds}"), end="")
+    simulation.step(total_steps//n_frames)
+    print(loading_bar(i+1, n_frames, f"Production run for {total_steps*dt / picoseconds * milliseconds}"), end="")
 simulation.step(total_steps)
 final_time = time.time()
 print(f"The process took {seconds_to_timestring(final_time-initial_time)}.")
@@ -154,6 +155,6 @@ print(f"The process took {seconds_to_timestring(final_time-initial_time)}.")
 state: State = simulation.context.getState(getPositions=True)
 
 # Speichern der PDB-Datei
-with open(f'../struct/heated_{struct_name}{run_name}.pdb', 'w') as output:
+with open(f'../struct/production_{struct_name}{run_name}.pdb', 'w') as output:
     app.PDBFile.writeFile(simulation.topology, state.getPositions(), output)
 # Speichern DCD-Datei
