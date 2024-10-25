@@ -16,7 +16,7 @@ open read unit 10 card name step3_pbcsetup.psf
 read psf  unit 10 card
 
 ! Read Coordinate
-open read unit 10 card name step3_pbcsetup.crd
+open read unit 10 card name step4_equilibration.crd
 read coor unit 10 card
 
 !
@@ -32,7 +32,7 @@ stream step3_pbcsetup.str
 calc pcnt = @cnt - 1
 if pcnt .gt. 0 then
     bomlev -5
-    open read  unit 11 card name step5_@pcnt.rst
+    open read  unit 11 card name prod_@pcnt.rst
     read coor dynr curr unit 11
     bomlev  0
 
