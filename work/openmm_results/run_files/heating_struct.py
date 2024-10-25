@@ -58,7 +58,7 @@ if not is_periodic:
     a_length = sizebox * nanometer
     b_length = sizebox * nanometer
     c_length = sizebox * nanometer
-    print("\n\nSetting periodic box vectors to")
+    print(f"\n\nSetting periodic box vectors to ({a_length}, {b_length}, {c_length})")
 
     # Set periodic box vectors
     psf.setBox(a_length, b_length, c_length)
