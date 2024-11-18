@@ -17,7 +17,7 @@ import os
 print(os.getcwd())
 
 
-heating_steps = 2500
+heating_steps = 1000
 struct_name = '1eru'
 run_name=f"hs{heating_steps}_NPT"
 
@@ -53,7 +53,7 @@ is_periodic = psf.box_vectors is not None
 
 #Periodic Box Vectors
 if not is_periodic:
-    sizebox=6.3
+    sizebox=6.0
     # Example values for box lengths (in nanometers)
     a_length = sizebox * nanometer
     b_length = sizebox * nanometer

@@ -17,7 +17,7 @@ import os
 print(os.getcwd())
 
 
-heating_steps = 2500
+heating_steps = 1000
 struct_name = '4pti'
 run_name=f"hs{heating_steps}_NPT"
 
@@ -34,7 +34,7 @@ else:
 psf = app.CharmmPsfFile(f'../struct/{struct_name}.psf')
 pdb = app.PDBFile(f'../struct/{struct_name}.pdb')
 print("This are the pdbreader files")
-forceField = app.ForceField('../charmm36/charmm36.xml', '../charmm36/water.xml')
+# forceField = app.ForceField('../charmm36/charmm36.xml', '../charmm36/water.xml')
 param_list=['toppar_water_ions.str', 'toppar_ions_won.str', 'toppar_dum_noble_gases.str', 'toppar_all36_synthetic_polymer_patch.str', 'toppar_all36_synthetic_polymer.str', 'toppar_all36_prot_retinol.str', 'toppar_all36_prot_na_combined.str', 'toppar_all36_prot_modify_res.str', 'toppar_all36_prot_model.str', 'toppar_all36_prot_heme.str', 'toppar_all36_prot_fluoro_alkanes.str', 'toppar_all36_prot_c36m_d_aminoacids.str', 'toppar_all36_prot_arg0.str', 'toppar_all36_polymer_solvent.str', 'toppar_all36_na_rna_modified.str', 'toppar_all36_nano_lig_patch.str', 'toppar_all36_nano_lig.str', 'toppar_all36_na_nad_ppi.str', 'toppar_all36_moreions.str', 'toppar_all36_lipid_yeast.str', 'toppar_all36_lipid_tag.str', 'toppar_all36_lipid_sphingo.str', 'toppar_all36_lipid_prot.str', 'toppar_all36_lipid_oxidized.str', 'toppar_all36_lipid_mycobacterial.str', 'toppar_all36_lipid_model.str', 'toppar_all36_lipid_miscellaneous.str', 'toppar_all36_lipid_lps.str', 'toppar_all36_lipid_lnp.str', 'toppar_all36_lipid_inositol.str', 'toppar_all36_lipid_hmmm.str', 'toppar_all36_lipid_ether.str', 'toppar_all36_lipid_detergent.str', 'toppar_all36_lipid_dag.str', 'toppar_all36_lipid_cholesterol.str', 'toppar_all36_lipid_cardiolipin.str', 'toppar_all36_lipid_bacterial.str', 'toppar_all36_lipid_archaeal.str', 'toppar_all36_label_spin.str', 'toppar_all36_label_fluorophore.str', 'toppar_all36_carb_imlab.str', 'toppar_all36_carb_glycopeptide.str', 'toppar_all36_carb_glycolipid.str', 'top_interface.rtf', 'top_all36_prot.rtf', 'top_all36_na.rtf', 'top_all36_lipid.rtf', 'top_all36_cgenff.rtf', 'top_all36_carb.rtf', 'par_interface.prm', 'par_all36_na.prm', 'par_all36m_prot.prm', 'par_all36_lipid.prm', 'par_all36_cgenff.prm', 'par_all36_carb.prm', 'cam.str']
 param_files= ["../params/"+ filename for filename in param_list]
 params = app.CharmmParameterSet(*param_files)
@@ -53,7 +53,7 @@ is_periodic = psf.box_vectors is not None
 
 #Periodic Box Vectors
 if not is_periodic:
-    sizebox=6.3
+    sizebox=6.0
     # Example values for box lengths (in nanometers)
     a_length = sizebox * nanometer
     b_length = sizebox * nanometer
@@ -106,13 +106,13 @@ system = psf.createSystem(params, nonbondedMethod=nonbondedMethod, nonbondedCuto
 integrator = LangevinMiddleIntegrator(initial_temperature, friction, dt)
 integrator.setConstraintTolerance(constraintTolerance)
 
-values2report = {"step": True, "kineticEnergy": True, "temperature": True, "speed": True, "volume": True}
-outfile=f"../results/{struct_name}_heating{run_name}.csv"
+values2report = {"step": True, "speed": True, "potentialEnergy": True, "kineticEnergy": True, "temperature": True, "volume": True}
+outfile=f"../results/4pti_heating.csv"
 reporter = app.StateDataReporter(outfile, heating_steps/10, 
                                   separator=';', **values2report)
 print(f"\n\nResults for {get_keyString(values2report)} will be saved in {outfile}")
 
-outfile=f"../results/{struct_name}_heating{run_name}.dcd"
+outfile=f"../results/4pti_heating.dcd"
 dcd_reporter = app.DCDReporter(f'outfile', int(heating_steps/10))
 print(f"Trajectory will be saved in {outfile}")
 
@@ -179,6 +179,6 @@ box_vectors = state.getPeriodicBoxVectors()
 simulation.topology.setPeriodicBoxVectors(box_vectors)
 
 # Save PDB-File
-with open(f'../struct/heated_{struct_name}{run_name}.pdb', 'w') as output:
+with open(f'../struct/heated_4pti.pdb', 'w') as output:
     app.PDBFile.writeFile(simulation.topology, state.getPositions(), output)
-    print(f"Final structure saved as heated_{struct_name}{run_name}.pdb")
+    print(f"Final structure saved as heated_4pti.pdb")

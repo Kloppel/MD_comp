@@ -1,32 +1,78 @@
 import MDAnalysis as mda 
+import pandas as pd
+from matplotlib import pyplot as plt
+from MDAnalysis.analysis.hydrogenbonds import HydrogenBondAnalysis
+import numpy as np
+from MDAnalysis.analysis import rms
+from MDAnalysis.analysis.dihedrals import Dihedral
 
-universe = mda.Universe("1eru.psf", "1eru_eq.dcd", "1eru_prod.dcd")
+used_program = "namd/"
+
+universe = mda.Universe("4pti.psf", f"{used_program}4pti_eq1.dcd", f"{used_program}4pti_prod1.dcd")
 
 # Loading a structure or trajectory
 
-
-u = mda.Universe("1eru.psf", "1eru_eq.dcd", "1eru_prod.dcd")
+u = mda.Universe("4pti.psf", f"{used_program}4pti_eq1.dcd", f"{used_program}4pti_prod1.dcd")
 print(u)
 print(len(u.trajectory))
 
-# Groups of atoms
-print(u.residues)
-u.atoms
-
-# AtomGroup positions and methods
-ca = u.select_atoms("protein")
-print(ca.positions)
-print(ca.positions.shape)
-print(ca.center_of_mass())
-print(ca.center_of_geometry())
-print(ca.total_mass())
-print(ca.total_charge())
-print(ca.radius_of_gyration())
-print(ca.bsphere())
-
-
 # Working with trajectories
 print(len(u.trajectory))
+
+# Output Values
+output_folder = f"{used_program}output/"
+data = []
+with open(f"{used_program}4pti_eq1.out", "r") as file:
+    for line in file:
+        if "ENERGY:" in line:
+            values = line.split()[1:]
+#            values = [float(i) for i in values]
+            data.append(values)
+columns = ["TS", "BOND", "ANGLE", "DIHED", "IMPRP", "ELECT", "VDW", "BOUNDARY", "MISC", "KINETIC", "TOTAL", "TEMP", "POTENTIAL", "TOTAL3", "TEMPAVG", "PRESSURE", "GPRESSURE", "VOLUME", "PRESSAVG", "GPRESSAVG"]
+data, new_list = data[4:], []
+for line in data:
+    dataline = [float(i) for i in line]
+    new_list.append(dataline)
+data = new_list
+df = pd.DataFrame(data, columns=columns)
+df = df[4:]
+plt.plot(df['TS'], df['TEMP'])
+plt.xlabel("Time Step (2fs/step)")
+plt.ylabel("Temperature (K)")
+plt.title("Temperature over Time") 
+plt.savefig(f"{output_folder}temperature.jpg")
+plt.clf()
+plt.plot(df['TS'], df['TOTAL'])
+plt.xlabel("Time Step (2fs/step)")
+plt.ylabel("Total Energy")
+plt.title("Total Energy over Time") 
+plt.savefig(f"{output_folder}total_energy.jpg")
+plt.clf()
+plt.plot(df['TS'], df['KINETIC'])
+plt.xlabel("Time Step (2fs/step)")
+plt.ylabel("Kinetic Energy")
+plt.title("Kinetic Energy over Time") 
+plt.savefig(f"{output_folder}kinetic_energy.jpg")
+plt.clf()
+plt.plot(df['TS'], df['POTENTIAL'])
+plt.xlabel("Time Step (2fs/step)")
+plt.ylabel("Potentielle Energy")
+plt.title("Potential Energy over Time") 
+plt.savefig(f"{output_folder}potential_energy.jpg")
+plt.clf()
+plt.plot(df['TS'], df['VOLUME'])
+plt.xlabel("Time Step (2fs/step)")
+plt.ylabel("Volumen")
+plt.title("Volume over Time") 
+plt.savefig(f"{output_folder}volume.jpg")
+plt.clf()
+plt.plot(df['TS'], df['PRESSURE'])
+plt.xlabel("Time Step (2fs/step)")
+plt.ylabel("Pressure (bar)")
+plt.title("Pressure over Time") 
+plt.savefig(f"{output_folder}pressure.jpg")
+plt.clf()
+# Radius of gyration
 
 for ts in u.trajectory[:1]:
     time = u.trajectory.time
@@ -47,24 +93,22 @@ for ts in u.trajectory:
     time.append(u.trajectory.time)
     rgyr.append(protein.radius_of_gyration())
 
-import pandas as pd
-from matplotlib import pyplot as plt
 rgyr_df = pd.DataFrame(rgyr, columns=['Radius of gyration (A)'], index=time)
 rgyr_df.index.name = 'Time (ps)'
 
 rgyr_df.head()
 
 rgyr_df.plot(title='Radius of gyration')
+plt.savefig("Radius of gyration.jpg")
 plt.show()
 
 # Writing out coordinates
+# RMSD
 
-a = u.select_atoms('protein')
+ca = u.select_atoms('protein')
 with mda.Writer('4pti.xtc', ca.n_atoms) as w:
     for ts in u.trajectory:
         w.write(ca)
-
-from MDAnalysis.analysis import rms
 
 bb = u.select_atoms('protein')
 
@@ -79,9 +123,6 @@ rmsd_analysis = rms.RMSD(u, select='backbone', groupselections=['protein'])
 rmsd_analysis.run()
 print(rmsd_analysis.results.rmsd.shape)
 
-
-import pandas as pd
-
 rmsd_df = pd.DataFrame(rmsd_analysis.results.rmsd[:, 2:],
                        columns=['Backbone', 'Protein'],
                        index=rmsd_analysis.results.rmsd[:, 1])
@@ -90,16 +131,19 @@ rmsd_df.head()
 rmsd_df.plot(title='RMSD')
 plt.show()
 
-import pickle
-import numpy as np
-np.set_printoptions(linewidth=100)
-
-from MDAnalysis.analysis.hydrogenbonds import HydrogenBondAnalysis
+# Hbonds
+print("hbonds selection")
 
 hbonds = HydrogenBondAnalysis(universe=u)
 
 protein_hydrogens_sel = hbonds.guess_hydrogens("protein")
 protein_acceptors_sel = hbonds.guess_acceptors("protein")
+
+water_hydrogens_sel = "resname TIP3 and name H1 H2"
+water_acceptors_sel = "resname TIP3 and name OH2"
+
+hbonds.hydrogens_sel = f"({protein_hydrogens_sel}) or ({water_hydrogens_sel} and around 10 not resname TIP3)"
+hbonds.acceptors_sel = f"({protein_acceptors_sel}) or ({water_acceptors_sel} and around 10 not resname TIP3)"
 
 print(f"hydrogen_sel = {protein_hydrogens_sel}")
 print(f"acceptors_sel = {protein_acceptors_sel}")
@@ -107,62 +151,37 @@ print(f"acceptors_sel = {protein_acceptors_sel}")
 hbonds = HydrogenBondAnalysis(
     universe=u,
     donors_sel=None,
-    hydrogens_sel=protein_hydrogens_sel,
-    acceptors_sel=protein_acceptors_sel,
+    hydrogens_sel=hbonds.hydrogens_sel,
+    acceptors_sel=hbonds.acceptors_sel,
     d_a_cutoff=3.0,
     d_h_a_angle_cutoff=150,
     update_selections=False
 )
 
-hbonds.run(
-    start=None,
-    stop=None,
-    step=None,
-    verbose=True
-)
+hbonds.run(start=1,end=540, verbose=True)
 
 print(hbonds.results.hbonds.shape)
-print(hbonds.results.hbonds[0])
 hbonds.results.hbonds.dtype
-first_hbond = hbonds.results.hbonds[0]
-frame, donor_ix, hydrogen_ix, acceptor_ix = first_hbond[:4].astype(int)
-u.trajectory[frame]
-atoms = u.atoms[[donor_ix, hydrogen_ix, acceptor_ix]]
-atoms
+n_hbond = hbonds.results.hbonds
+
+print("end of hbonds calculation")
+
+n_hbonds = hbonds.count_by_time()
+
+np.save("4pti_hbonds.npy", n_hbond)
 
 # Counts the number of hydrogen bonds for each frame
-plt.plot(hbonds.times, hbonds.count_by_time(), lw=2)
+plt.plot(hbonds.times, n_hbonds, lw=2)
 
 plt.title("Number of hydrogon bonds over time", weight="bold")
 plt.xlabel("Time (ps)")
 plt.ylabel(r"$N_{HB}$")
-
+plt.grid(True)
+plt.savefig("hbonds.jpg")
 plt.show()
 
-hbonds.count_by_type()
-
-for donor, acceptor, count in hbonds.count_by_type():
-
-    donor_resname, donor_type = donor.split(":")
-    n_donors = u.select_atoms(f"resname {donor_resname} and type {donor_type}").n_atoms
-
-    # average number of hbonds per donor molecule per frame
-    mean_count = 2 * int(count) / (hbonds.n_frames * n_donors)  # multiply by two as each hydrogen bond involves two water molecules
-    print(f"{donor} to {acceptor}: {mean_count:.2f}")
-
-hbonds.count_by_ids()
-counts = hbonds.count_by_ids()
-most_common = counts[0]
-
-print(f"Most common donor: {u.atoms[most_common[0]]}")
-print(f"Most common hydrogen: {u.atoms[most_common[1]]}")
-print(f"Most common acceptor: {u.atoms[most_common[2]]}")
-
-np.save("4pti_hbonds.npy", hbonds.results.hbonds)
 
 # Dihedral Angles
-
-from MDAnalysis.analysis.dihedrals import Dihedral
 
 tyr = u.select_atoms('resname TYR')
 
