@@ -58,25 +58,24 @@ define SC   sele .not. BB .and. .not. hydrogen .and. ( PROT .or. CARB ) end
 cons harm force 1.0 sele BB end
 cons harm force 0.1 sele SC end
 
-mini SD   nstep 1000 nprint 5
-mini ABNR nstep 9000 nprint 5
+mini SD   nstep 1000 nprint 500
+mini ABNR nstep 9000 nprint 500
 
-open write card name "4pti_heat.rst" unit 11
-open write card name "4pti_heat.dcd" unit 12
+open write card name "4pti_heat.rst" unit 10
 
 ! Heating Process
 dynamics VVer strt -
-nstep 25000 timestep 0.001 nprint 1000 nsavc 100 -
-nsavv 0 inbfrq -1 iprfrq 100 ntrfrq 100 ihtfrq 500 -
-iunrea -1 iunwri 11 iuncrd 12 iunvel -1 kunit -1 -
-firstt 0.000000 finalt 300.0 teminc 6.0 -
+nstep 25000 timestep 0.001 nprint 1000 nsavc 1000 -
+nsavv 0 inbfrq -1 iprfrq 1000 ntrfrq 1000 ihtfrq 500 -
+iunrea -1 iunwri 10 iuncrd -1 iunvel -1 kunit -1 -
+firstt 0.000000 finalt 300.0 teminc 10.0 -
 iasors 1 iasvel 1 iscvel 0 ichecw 0
 
-openwrite card unit 13 name "4pti_heat.crd"
-wrtie coor unit 13 card
+open write card unit 12 name "4pti_heat.crd"
+write coor unit 12 card
 
-open write card unit 14 name "4pti_heat.pdb"
-write coor pdb unit 14 official
+open write card unit 13 name "4pti_heat.pdb"
+write coor pdb unit 13 official
 
 !
 ! NPT dynamics,
@@ -94,20 +93,21 @@ set temp = 300
 
 shake bonh param fast
 
-open write unit 12 card name step4_equilibration.rst
+open write unit 14 card name "4pti_equi.rst"
+open write unit 15 file name "step4_equi.dcd"
 
 DYNA CPT start timestep 0.001 nstep @nstep -
-     nprint 5000 iprfrq 5000 ntrfrq 5000 -
-     iunread -1 iunwri 12 iuncrd -1 iunvel -1 kunit -1 -
-     nsavc 0 nsavv 0 -
+     nprint 10000 iprfrq 10000 ntrfrq 10000 -
+     iunread 10 iunwri 14 iuncrd 15 iunvel -1 kunit -1 -
+     nsavc 10000 nsavv 10000 -
      hoover reft @temp tmass 100.0 -
      pmass 500.0 pref 1.0 pgamma 20.0
 
-open write unit 10 card name step4_equilibration.pdb
-write coor unit 10 pdb
+open write unit 16 card name step4_equilibration.pdb
+write coor unit 16 pdb
 
-open write unit 10 card name step4_equilibration.crd
-write coor unit 10 card
-close unit 10
+open write unit 17 card name step4_equilibration.crd
+write coor unit 17 card
+close unit 17
 
 stop

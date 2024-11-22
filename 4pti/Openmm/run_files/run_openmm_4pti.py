@@ -8,13 +8,16 @@ from sys import stdout, exit, stderr
 import psutil
 import time
 
+from utils_local import loading_bar, seconds_to_timestring, get_keyString, get_periodic_boxVectors_from_PDB
+
 import os
 print(os.getcwd())
 # Input Files
 
 psf = CharmmPsfFile('../struct/4pti.psf')
-crd = CharmmCrdFile('../struct/4pti.crd')
-pdb = PDBFile('../struct/4pti.pdb')
+# crd = CharmmCrdFile('../struct/4pti.crd')
+pdb = PDBFile('../struct/eq_4pti.pdb')
+initialpdb = f'../struct/eq_4pti.pdb'
 print("This are the pdbreader files")
 forceField = ForceField('../charmm36/charmm36.xml', '../charmm36/water.xml')
 param_list=['toppar_water_ions.str', 'toppar_ions_won.str', 'toppar_dum_noble_gases.str', 'toppar_all36_synthetic_polymer_patch.str', 'toppar_all36_synthetic_polymer.str', 'toppar_all36_prot_retinol.str', 'toppar_all36_prot_na_combined.str', 'toppar_all36_prot_modify_res.str', 'toppar_all36_prot_model.str', 'toppar_all36_prot_heme.str', 'toppar_all36_prot_fluoro_alkanes.str', 'toppar_all36_prot_c36m_d_aminoacids.str', 'toppar_all36_prot_arg0.str', 'toppar_all36_polymer_solvent.str', 'toppar_all36_na_rna_modified.str', 'toppar_all36_nano_lig_patch.str', 'toppar_all36_nano_lig.str', 'toppar_all36_na_nad_ppi.str', 'toppar_all36_moreions.str', 'toppar_all36_lipid_yeast.str', 'toppar_all36_lipid_tag.str', 'toppar_all36_lipid_sphingo.str', 'toppar_all36_lipid_prot.str', 'toppar_all36_lipid_oxidized.str', 'toppar_all36_lipid_mycobacterial.str', 'toppar_all36_lipid_model.str', 'toppar_all36_lipid_miscellaneous.str', 'toppar_all36_lipid_lps.str', 'toppar_all36_lipid_lnp.str', 'toppar_all36_lipid_inositol.str', 'toppar_all36_lipid_hmmm.str', 'toppar_all36_lipid_ether.str', 'toppar_all36_lipid_detergent.str', 'toppar_all36_lipid_dag.str', 'toppar_all36_lipid_cholesterol.str', 'toppar_all36_lipid_cardiolipin.str', 'toppar_all36_lipid_bacterial.str', 'toppar_all36_lipid_archaeal.str', 'toppar_all36_label_spin.str', 'toppar_all36_label_fluorophore.str', 'toppar_all36_carb_imlab.str', 'toppar_all36_carb_glycopeptide.str', 'toppar_all36_carb_glycolipid.str', 'top_interface.rtf', 'top_all36_prot.rtf', 'top_all36_na.rtf', 'top_all36_lipid.rtf', 'top_all36_cgenff.rtf', 'top_all36_carb.rtf', 'par_interface.prm', 'par_all36_na.prm', 'par_all36m_prot.prm', 'par_all36_lipid.prm', 'par_all36_cgenff.prm', 'par_all36_carb.prm', 'cam.str']
@@ -35,14 +38,11 @@ is_periodic = psf.box_vectors is not None
 
 #Periodic Box Vectors
 if not is_periodic:
-    sizebox=6.3
-    # Example values for box lengths (in nanometers)
-    a_length = sizebox * nanometer
-    b_length = sizebox * nanometer
-    c_length = sizebox * nanometer
-    print("Setting periodic box vectors to")
-
-    # Set periodic box vectors
+    boxVectors, boxAngles = get_periodic_boxVectors_from_PDB(initialpdb)
+    a_length = boxVectors[0]/10 * nanometer
+    b_length = boxVectors[1]/10 * nanometer
+    c_length = boxVectors[2]/10 * nanometer
+    print(f"\n\nSetting periodic box vectors to ({a_length}, {b_length}, {c_length})")
     psf.setBox(a_length, b_length, c_length)
 
 #Integrators
@@ -57,8 +57,8 @@ barostatInterval = 25
 
 steps = 5000000
 dcdReporter = DCDReporter('4pti_simulation.dcd', 10000)
-dataReporter = StateDataReporter('4pti_simualtion.txt', 10000, totalSteps=steps,
-    step=True, speed=True, progress=True, potentialEnergy=True, temperature=True, separator='\t')
+dataReporter = StateDataReporter('../outfile/4pti_simulation.txt', 10000, totalSteps=steps,
+                                 step=True, speed=True, potentialEnergy=True, kineticEnergy=True, totalEnergy=True, volume=True, temperature=True, separator='\t')
 checkpointReporter = CheckpointReporter('4pti_simulation.chk', 10000)
 
 # Prepare the Simulation
@@ -78,7 +78,7 @@ integrator.setConstraintTolerance(constraintTolerance)
 simulation = Simulation(topology, system, integrator)
 
 # Load checkpoint file
-checkpoint_file = '4pti_eq.chk'
+checkpoint_file = '../outfile/4pti_eq.chk'
 simulation.loadCheckpoint(checkpoint_file)
 
 # Simulate

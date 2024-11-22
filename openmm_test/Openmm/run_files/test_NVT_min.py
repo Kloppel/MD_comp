@@ -7,27 +7,21 @@ from simtk.unit import *
 from sys import stdout, exit, stderr
 import psutil
 import time
+from utils_local import loading_bar, seconds_to_timestring, get_keyString, get_periodic_boxVectors_from_PDB
 
 import os
 print(os.getcwd())
 
 # Input Files
-psf = CharmmPsfFile('../struct/1eru.psf')
-# crd = CharmmCrdFile('../struct/1eru.crd') # if no pdb is givin crd also usable
-pdb = PDBFile('../struct/1eru.pdb')
+psf = CharmmPsfFile('../struct/4pti.psf')
+crd = CharmmCrdFile('../struct/4pti.crd')
+pdb = PDBFile('../struct/heated_4pti.pdb')
+initialpdb = f'../struct/heated_4pti.pdb'
 print("This are the pdbreader files")
-forceField = ForceField('../charmm36/charmm36.xml', '../charmm36/water.xml')
+# forceField = ForceField('../charmm36/charmm36.xml', '../charmm36/water.xml')
 param_list=['toppar_water_ions.str', 'toppar_ions_won.str', 'toppar_dum_noble_gases.str', 'toppar_all36_synthetic_polymer_patch.str', 'toppar_all36_synthetic_polymer.str', 'toppar_all36_prot_retinol.str', 'toppar_all36_prot_na_combined.str', 'toppar_all36_prot_modify_res.str', 'toppar_all36_prot_model.str', 'toppar_all36_prot_heme.str', 'toppar_all36_prot_fluoro_alkanes.str', 'toppar_all36_prot_c36m_d_aminoacids.str', 'toppar_all36_prot_arg0.str', 'toppar_all36_polymer_solvent.str', 'toppar_all36_na_rna_modified.str', 'toppar_all36_nano_lig_patch.str', 'toppar_all36_nano_lig.str', 'toppar_all36_na_nad_ppi.str', 'toppar_all36_moreions.str', 'toppar_all36_lipid_yeast.str', 'toppar_all36_lipid_tag.str', 'toppar_all36_lipid_sphingo.str', 'toppar_all36_lipid_prot.str', 'toppar_all36_lipid_oxidized.str', 'toppar_all36_lipid_mycobacterial.str', 'toppar_all36_lipid_model.str', 'toppar_all36_lipid_miscellaneous.str', 'toppar_all36_lipid_lps.str', 'toppar_all36_lipid_lnp.str', 'toppar_all36_lipid_inositol.str', 'toppar_all36_lipid_hmmm.str', 'toppar_all36_lipid_ether.str', 'toppar_all36_lipid_detergent.str', 'toppar_all36_lipid_dag.str', 'toppar_all36_lipid_cholesterol.str', 'toppar_all36_lipid_cardiolipin.str', 'toppar_all36_lipid_bacterial.str', 'toppar_all36_lipid_archaeal.str', 'toppar_all36_label_spin.str', 'toppar_all36_label_fluorophore.str', 'toppar_all36_carb_imlab.str', 'toppar_all36_carb_glycopeptide.str', 'toppar_all36_carb_glycolipid.str', 'top_interface.rtf', 'top_all36_prot.rtf', 'top_all36_na.rtf', 'top_all36_lipid.rtf', 'top_all36_cgenff.rtf', 'top_all36_carb.rtf', 'par_interface.prm', 'par_all36_na.prm', 'par_all36m_prot.prm', 'par_all36_lipid.prm', 'par_all36_cgenff.prm', 'par_all36_carb.prm', 'cam.str']
 param_files= ["../params/"+ filename for filename in param_list]
 params = CharmmParameterSet(*param_files)
-
-#Integrators
-
-dt = 0.002*picoseconds
-temperature = 300*kelvin
-friction = 1.0/picosecond
-pressure = 1.0*atmospheres
-barostatInterval = 25
 
 # System Configuration
 
@@ -43,15 +37,28 @@ is_periodic = psf.box_vectors is not None
 
 #Periodic Box Vectors
 if not is_periodic:
-    sizebox=6.3
-    # Example values for box lengths (in nanometers)
-    a_length = sizebox * nanometer
-    b_length = sizebox * nanometer
-    c_length = sizebox * nanometer
-    print("Setting periodic box vectors to")
-
-    # Set periodic box vectors
+    boxVectors, boxAngles = get_periodic_boxVectors_from_PDB(initialpdb)
+    a_length = boxVectors[0]
+    b_length = boxVectors[1]
+    c_length = boxVectors[2]
+    print(f"\n\nSetting periodic box vectors to ({a_length}, {b_length}, {c_length})")
     psf.setBox(a_length, b_length, c_length)
+
+#Integrators
+
+dt = 0.002*picoseconds
+temperature = 300*kelvin
+friction = 1.0/picosecond
+pressure = 1.0*atmospheres
+barostatInterval = 25
+
+# Simulation Options
+
+equilibrationSteps = 50000
+dcdReporter = DCDReporter('../outfile/4pti_NVT.dcd', 100)
+dataReporter = StateDataReporter('../outfile/4pti_NVT.txt', 100, totalSteps=equilibrationSteps,
+                                 step=True, speed=True, potentialEnergy=True, kineticEnergy=True, totalEnergy=True, volume=True, temperature=True, separator='\t')
+checkpointReporter = CheckpointReporter('../outfile/4pti_NVT.chk', 100)
 
 # Prepare the Simulation
 def print_memory_usage():
@@ -61,27 +68,44 @@ def print_memory_usage():
 start1 = time.time()
 print('Building system...')
 topology = psf.topology
-positions = pdb.positions # crd.positions if crd is given and no pdb file
+positions = crd.positions
 system = psf.createSystem(params, nonbondedMethod=nonbondedMethod, nonbondedCutoff=nonbondedCutoff,
                           constraints=constraints, rigidWater=rigidWater, ewaldErrorTolerance=ewaldErrorTolerance, hydrogenMass=hydrogenMass)
-system.addForce(MonteCarloBarostat(pressure, temperature, barostatInterval))
+
 # Integrators
 integrator = LangevinMiddleIntegrator(temperature, friction, dt)
 integrator.setConstraintTolerance(constraintTolerance)
 simulation = Simulation(topology, system, integrator)
 simulation.context.setPositions(positions)
 
-# Perform minimization before heating
-print("minimizing system...")
+# Save the equilibrated state to a checkpoint file
+checkpoint_file = '../outfile/4pti_NVT.chk'
+simulation.saveCheckpoint(checkpoint_file)
+simulation.reporters.append(dcdReporter)
+simulation.reporters.append(dataReporter)
+simulation.reporters.append(checkpointReporter)
 
-simulation.minimizeEnergy(maxIterations=10000)
+# Equilibration
+simulation.minimizeEnergy(maxIterations=0)
+print_memory_usage()
+print('Initial potential energy:')
+state = simulation.context.getState(getPositions=True)
+end1 = time.time()
+print("system building time:            ", end1-start1)
+print('Equilibrating...')
+simulation.context.setVelocitiesToTemperature(temperature)
+simulation.step(equilibrationSteps)
+end2 = time.time()
+print("equilibration time:               ", end2-end1)
 
-print("end of minimization")
+# Save the equilibrated state to a checkpoint file
+checkpoint_file = '../outfile/4pti_NVT.chk'
+simulation.saveCheckpoint(checkpoint_file)
 
 state = simulation.context.getState(getPositions=True)
 
-with open('../struct/minimized_1eru.pdb', 'w') as output:
+# Speichern der PDB-Datei
+with open('../struct/4pti_NVT.pdb', 'w') as output:
     PDBFile.writeFile(simulation.topology, state.getPositions(), output)
 
-
-
+print("End of equilibration")
