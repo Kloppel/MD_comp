@@ -112,7 +112,7 @@ plt.show()
 # Writing out coordinates
 # RMSD
 
-ca = u.select_atoms('protein and name CA')
+ca = u.select_atoms('protein')
 with mda.Writer('1eru.xtc', ca.n_atoms) as w:
     for ts in u.trajectory:
         w.write(ca)
@@ -126,12 +126,12 @@ last = ca.positions
 rms.rmsd(first, last)
 u.trajectory[0] # set to first frame
 
-rmsd_analysis = rms.RMSD(u, select='backbone', groupselections=['protein and name CA'])
+rmsd_analysis = rms.RMSD(u, select='backbone', groupselections=['protein'])
 rmsd_analysis.run()
 print(rmsd_analysis.results.rmsd.shape)
 
 rmsd_df = pd.DataFrame(rmsd_analysis.results.rmsd[:, 2:],
-                       columns=['backbone', 'Protein and name CA'],
+                       columns=['backbone', 'protein'],
                        index=rmsd_analysis.results.rmsd[:, 1])
 rmsd_df.index.name = 'Time (ps)'
 rmsd_df.head()

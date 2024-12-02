@@ -55,10 +55,10 @@ barostatInterval = 25
 # Simulation Options
 
 equilibrationSteps = 500000
-dcdReporter = DCDReporter('../outfile/1eru_eq.dcd', 10000)
-dataReporter = StateDataReporter('../outfile/1eru_eq.txt', 10000, totalSteps=equilibrationSteps,
+dcdReporter = DCDReporter('../outfile/1eru_eq1.dcd', 10000)
+dataReporter = StateDataReporter('../outfile/1eru_eq1.txt', 10000, totalSteps=equilibrationSteps,
                                  step=True, speed=True, potentialEnergy=True, kineticEnergy=True, totalEnergy=True, volume=True, temperature=True, separator='\t')
-checkpointReporter = CheckpointReporter('../outfile/1eru_eq.chk', 10000)
+checkpointReporter = CheckpointReporter('../outfile/1eru_eq1.chk', 10000)
 
 # Prepare the Simulation
 def print_memory_usage():
@@ -80,7 +80,7 @@ simulation = Simulation(topology, system, integrator)
 simulation.context.setPositions(positions)
 
 # Save the equilibrated state to a checkpoint file
-checkpoint_file = '../outfile/1eru_eq.chk'
+checkpoint_file = '../outfile/1eru_eq1.chk'
 simulation.saveCheckpoint(checkpoint_file)
 simulation.reporters.append(dcdReporter)
 simulation.reporters.append(dataReporter)
@@ -99,13 +99,13 @@ end2 = time.time()
 print("equilibration time:               ", end2-end1)
 
 # Save the equilibrated state to a checkpoint file
-checkpoint_file = '../outfile/1eru_eq.chk'
+checkpoint_file = '../outfile/1eru_eq1.chk'
 simulation.saveCheckpoint(checkpoint_file)
 
 state = simulation.context.getState(getPositions=True)
 
 # Speichern der PDB-Datei
-with open('../struct/eq_1eru.pdb', 'w') as output:
+with open('../struct/eq_1eru1.pdb', 'w') as output:
     PDBFile.writeFile(simulation.topology, state.getPositions(), output)
 
 print("End of equilibration")

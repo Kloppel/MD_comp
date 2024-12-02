@@ -47,7 +47,7 @@ if not is_periodic:
 
 #Integrators
 
-dt = 0.004*picoseconds
+dt = 0.002*picoseconds
 temperature = 300*kelvin
 friction = 1.0/picosecond
 pressure = 1.0*atmospheres
@@ -56,10 +56,10 @@ barostatInterval = 25
 # Simulation Options
 
 steps = 5000000
-dcdReporter = DCDReporter('4pti_simulation.dcd', 10000)
-dataReporter = StateDataReporter('../outfile/4pti_simulation.txt', 10000, totalSteps=steps,
+dcdReporter = DCDReporter('4pti_simulation1.dcd', 10000)
+dataReporter = StateDataReporter('../outfile/4pti_simulation1.txt', 10000, totalSteps=steps,
                                  step=True, speed=True, potentialEnergy=True, kineticEnergy=True, totalEnergy=True, volume=True, temperature=True, separator='\t')
-checkpointReporter = CheckpointReporter('4pti_simulation.chk', 10000)
+checkpointReporter = CheckpointReporter('4pti_simulation1.chk', 10000)
 
 # Prepare the Simulation
 

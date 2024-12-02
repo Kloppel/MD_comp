@@ -19,3 +19,4 @@ github
 *.tex
 *.ipynb
 *.err
+*.npy

@@ -1,0 +1,71 @@
+* NPT Production Run without Restart File
+*
+
+!DIMENS CHSIZE 5000000 MAXRES 3000000
+
+! Read topology and parameter files
+stream toppar.str
+
+! Read PSF
+open read unit 10 card name step3_pbcsetup.psf
+read psf unit 10 card
+
+! Read Coordinates
+open read unit 10 card name step4_equilibration.crd
+read coor unit 10 card
+
+! Generate velocities at 300 K
+generate velocities temp 300.0
+
+!
+! Setup PBC (Periodic Boundary Condition)
+!
+stream step3_pbcsetup.str
+
+! Image centering
+IMAGE BYRESID XCEN @xcen YCEN @ycen ZCEN @zcen sele resname TIP3 end
+
+! Nonbonded Options
+nbonds atom vatom vfswitch bycb -
+       ctonnb 10.0 ctofnb 12.0 cutnb 16.0 cutim 16.0 -
+       inbfrq -1 imgfrq -1 wmin 1.0 cdie eps 1.0 -
+       ewald pmew fftx @fftx ffty @ffty fftz @fftz kappa .34 spline order 6
+energy
+
+!
+! Restraint: Center of mass near origin
+!
+MMFP
+GEO rcm sphere -
+    Xref @xcen Yref @ycen Zref @zcen XDIR 1.0 YDIR 1.0 ZDIR 1.0 -
+    harmonic FORCE 1.0 select .not. ( hydrogen .or. resname TIP3 ) end
+END
+
+!
+! NVT dynamics: Configure MD run parameters
+!
+set nstep = 508000
+set temp = 300
+
+shake bonh param fast
+
+open write unit 12 card name step5_@cnt.rst
+open write unit 13 file name step5_@cnt.dcd
+
+DYNA VVER leap restart time 0.002 nstep @nstep -
+     nprint 1000 iprfrq 1000 ntrfrq 1000 -
+     iunwri 12 iuncrd 13 iunvel -1 kunit -1 -
+     nsavc 1000 nsavv 1000 -
+     HOOVER reft @temp tmass 2000.0 tbath @temp firstt @temp
+
+! Save output files
+open write unit 10 card name step5_@cnt.pdb
+write coor unit 10 pdb
+close unit 10
+
+open write unit 10 card name step5_@cnt.crd
+write coor unit 10 card
+close unit 10
+
+stop
+
