@@ -20,3 +20,5 @@ github
 *.ipynb
 *.err
 *.npy
+__pycache__/
+*.chk
